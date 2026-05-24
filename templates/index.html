@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Richardson Extrapolation — Numerical Methods Calculator</title>
+  <meta name="description" content="Professional interactive calculator for Richardson Extrapolation (Numerical Differentiation). Includes mathematical derivation, two worked examples, convergence tableau, second derivative, and safe SymPy parsing." />
+  <meta name="author" content="PIT Finals 2026 — Numerical Methods" />
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+
+  <script src="{{ url_for('static', filename='js/mathjax-config.js') }}"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" defer></script>
+</head>
+
+<body>
+<a class="skip-link" href="#calculator">Skip to calculator</a>
+
+<nav class="navbar" role="navigation" aria-label="Main navigation">
+  <div class="nav-inner">
+    <div class="nav-brand" aria-label="Richardson Extrapolation — Home">
+      <span aria-hidden="true">∂</span>
+      Richardson Extrapolation
+      <span class="badge">Topic 27</span>
+    </div>
+
+    <ul class="nav-links" id="navLinks" role="list">
+      <li><a href="#home"       aria-current="page">Home</a></li>
+      <li><a href="#discussion">Theory</a></li>
+      <li><a href="#examples">  Examples</a></li>
+      <li><a href="#calculator">Calculator</a></li>
+      <li><a href="#references">References</a></li>
+    </ul>
+
+    <div class="nav-actions">
+      <button id="themeToggle" class="theme-toggle"
+        title="Toggle dark / light mode" aria-label="Toggle colour theme">
+      </button>
+      <button id="hamburger" class="hamburger"
+        aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="navLinks">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<section class="hero" id="home" aria-labelledby="hero-heading">
+  <div class="container">
+    <div class="hero-grid">
+      <div>
+        <div class="hero-tag" aria-label="Category">Numerical Differentiation · Topic 27</div>
+        <h1 id="hero-heading">Richardson<br/>Extrapolation</h1>
+        <p>
+          A sequence-acceleration technique that eliminates the leading error term of a
+          finite-difference approximation, lifting accuracy from
+          <strong style="color:#38bdf8">O(h²)</strong> to
+          <strong style="color:#a3e635">O(h⁴)</strong> — or even O(h⁸) via a full tableau.
+        </p>
+        <div class="hero-btns">
+          <a href="#calculator" class="btn btn-primary">Open Calculator</a>
+          <a href="#discussion" class="btn btn-outline">Read Theory</a>
+        </div>
+        <div class="hero-stats" role="list" aria-label="Key statistics">
+          <div class="stat" role="listitem">
+            <span class="stat-num">O(h⁴)</span>
+            <span class="stat-lbl">Accuracy</span>
+          </div>
+          <div class="stat" role="listitem">
+            <span class="stat-num">4</span>
+            <span class="stat-lbl">Evaluations</span>
+          </div>
+          <div class="stat" role="listitem">
+            <span class="stat-num">O(h⁸)</span>
+            <span class="stat-lbl">With tableau</span>
+          </div>
+        </div>
+      </div>
+      <div class="hero-visual" aria-hidden="true">
+        <div class="formula-card">
+          <div class="label">Central Difference</div>
+          <div class="eq">\[ D(h) = \frac{f(x+h)-f(x-h)}{2h} \]</div>
+          <div class="label" style="margin-top:.75rem">Richardson Extrapolation</div>
+          <div class="eq">\[ R = \frac{4\,D(h/2) - D(h)}{3} \]</div>
+          <div class="result">Error: O(h²) → O(h⁴)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="overview" aria-labelledby="overview-heading">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag">Overview</span>
+      <h2 id="overview-heading">Why Richardson Extrapolation?</h2>
+      <p>A systematic method for upgrading the accuracy of any finite-difference formula by exploiting its known error structure.</p>
+    </div>
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-icon" aria-hidden="true">🎯</div>
+        <h3>Error Cancellation</h3>
+        <p>The weighted combination \( R = (4D(h/2) - D(h))/3 \) algebraically cancels the \(h^2\) term, leaving only an \(O(h^4)\) residual.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon" aria-hidden="true">⚡</div>
+        <h3>Minimal Cost</h3>
+        <p>Only 4 function evaluations needed — the same operations required for two central-difference approximations at different step sizes.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon" aria-hidden="true">📐</div>
+        <h3>General Principle</h3>
+        <p>Applicable to any approximation with an asymptotic error expansion in even powers of h. Foundation for Romberg integration, deferred-correction ODEs, and more.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon" aria-hidden="true">🔬</div>
+        <h3>Iterable</h3>
+        <p>Apply Richardson again to the Richardson result — each level doubles the order of accuracy. The full 4×4 tableau achieves O(h⁸) with just 8 function evaluations.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="discussion" aria-labelledby="discussion-heading">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag">Theory</span>
+      <h2 id="discussion-heading">Mathematical Discussion</h2>
+      <p>Formal Taylor-series derivation, error analysis, second-derivative extension, and a comparison of advantages and limitations.</p>
+    </div>
+
+    <div class="card" style="max-width:920px;margin:0 auto">
+      <div class="prose">
+
+        <h3>1. Numerical Differentiation and the Central-Difference Formula</h3>
+        <p>
+          Let \( f : \mathbb{R} \to \mathbb{R} \) be sufficiently smooth. The <em>central-difference</em>
+          formula approximates \( f'(x) \) using two function evaluations symmetrically placed about \(x\):
+        </p>
+        <div class="math-block">
+          \[
+          D(h) \;=\; \frac{f(x+h) - f(x-h)}{2h}
+          \]
+        </div>
+        <p>
+          Expanding via Taylor's theorem around \(x\):
+        </p>
+        <div class="math-block">
+          \[
+          f(x \pm h) = f(x) \pm h f'(x) + \frac{h^2}{2}f''(x) \pm \frac{h^3}{6}f'''(x)
+                       + \frac{h^4}{24}f^{(4)}(x) \pm \cdots
+          \]
+        </div>
+        <p>Subtracting and dividing by \(2h\) gives the <em>exact</em> expression:</p>
+        <div class="math-block">
+          \[
+          D(h) = f'(x) + \underbrace{\frac{h^2}{6}f'''(x)}_{c_2 h^2}
+                       + \underbrace{\frac{h^4}{120}f^{(5)}(x)}_{c_4 h^4} + \cdots
+          \]
+        </div>
+        <p>
+          The error is purely <em>even</em> in \(h\): a crucial fact that Richardson exploits.
+          The leading truncation error is \(O(h^2)\).
+        </p>
+
+        <h3>2. Richardson Extrapolation — Formal Derivation</h3>
+        <div class="definition-box">
+          <h4>Definition (L.F. Richardson, 1911)</h4>
+          Given two approximations at step sizes \(h\) and \(h/2\) each with error structure
+          \( D(h) = f'(x) + c_2 h^2 + O(h^4) \), Richardson Extrapolation eliminates
+          the \(h^2\) term by forming the weighted combination:
+          \[
+            R(h) \;=\; \frac{4\,D(h/2) - D(h)}{3} \;=\; f'(x) + O(h^4)
+          \]
+        </div>
+        <p><strong>Derivation:</strong> Replace \(h\) with \(h/2\) in the error expansion:</p>
+        <div class="math-block">
+          \[
+          D\!\left(\tfrac{h}{2}\right) = f'(x) + c_2\!\left(\tfrac{h}{2}\right)^{\!2} + O(h^4)
+                                       = f'(x) + \tfrac{c_2 h^2}{4} + O(h^4)
+          \]
+        </div>
+        <p>Multiply by 4 and subtract \(D(h)\):</p>
+        <div class="math-block">
+          \[
+          4D\!\left(\tfrac{h}{2}\right) - D(h)
+          = 4\!\left[f'(x) + \tfrac{c_2 h^2}{4}\right] - \left[f'(x) + c_2 h^2\right] + O(h^4)
+          = 3\,f'(x) + O(h^4)
+          \]
+        </div>
+        <div class="math-block">
+          \[
+          \boxed{R(h) = \frac{4\,D(h/2) - D(h)}{3} = f'(x) + O(h^4)}
+          \]
+        </div>
+
+        <h3>3. Richardson Tableau — Higher-Order Extrapolation</h3>
+        <p>
+          The process can be iterated. Define the tableau entries \(D_{i,j}\) where column 0
+          contains central differences at decreasing step sizes and each subsequent column
+          eliminates one more error term:
+        </p>
+        <div class="math-block">
+          \[
+          D_{i,\,j} \;=\; \frac{4^j\,D_{i,\,j-1} - D_{i-1,\,j-1}}{4^j - 1},
+          \quad j \geq 1,\; i \geq j
+          \]
+        </div>
+        <p>
+          Column \(j\) has error \(O(h^{2(j+1)})\). A \(4\times 4\) tableau therefore
+          achieves \(O(h^8)\) accuracy — comparable to 8th-order Runge–Kutta — from
+          only 4 central-difference evaluations.
+        </p>
+
+        <h3>4. Second Derivative via Richardson Extrapolation</h3>
+        <p>
+          The second-order central-difference for \(f''(x)\) is:
+        </p>
+        <div class="math-block">
+          \[
+          D_2(h) = \frac{f(x+h) - 2f(x) + f(x-h)}{h^2}, \quad \text{error } O(h^2)
+          \]
+        </div>
+        <p>Applying Richardson gives \(O(h^4)\) accuracy for \(f''(x)\):</p>
+        <div class="math-block">
+          \[
+          R_2(h) = \frac{4\,D_2(h/2) - D_2(h)}{3} = f''(x) + O(h^4)
+          \]
+        </div>
+
+        <h3>5. Optimal Step Size</h3>
+        <p>
+          The total error has two competing contributions:
+          <em>truncation error</em> (\(\propto h^4\)) which decreases as \(h \to 0\), and
+          <em>rounding error</em> (\(\propto \varepsilon_{\text{mach}} / h\)) which grows.
+          The optimal step for Richardson is approximately:
+        </p>
+        <div class="math-block">
+          \[
+          h_{\text{opt}} \;\approx\; \varepsilon_{\text{mach}}^{1/4}
+          \;\approx\; 1.2 \times 10^{-4}
+          \]
+        </div>
+        <p>
+          where \(\varepsilon_{\text{mach}} \approx 2.2 \times 10^{-16}\) for 64-bit IEEE
+          double precision. The calculator automatically recommends a near-optimal step size.
+        </p>
+
+        <h3>6. Numerical Stability and Catastrophic Cancellation</h3>
+        <p>
+          When \(h\) is too small, the subtraction \(f(x+h) - f(x-h)\) may lose all significant
+          digits (\emph{catastrophic cancellation}). As a rule of thumb:
+        </p>
+        <div class="math-block">
+          \[
+          \text{Lost digits} \;\approx\; \log_{10}\!\left(\frac{\max(|f(x+h)|,|f(x-h)|)}{|f(x+h)-f(x-h)|}\right)
+          \]
+        </div>
+        <p>
+          The calculator detects this condition and warns the user. Avoid step sizes below
+          \(h \approx 10^{-8}\) for typical double-precision computation.
+        </p>
+
+        <h3>7. Advantages and Limitations</h3>
+        <div class="two-col">
+          <div class="pro-con-box pros">
+            <h4>✓ Advantages</h4>
+            <ul>
+              <li>Raises accuracy from O(h²) to O(h⁴) with 0 extra evaluations</li>
+              <li>Full tableau achieves O(h⁸) cheaply</li>
+              <li>No analytic derivative required</li>
+              <li>Self-contained error estimate via tableau differences</li>
+              <li>Extends to higher derivatives naturally</li>
+              <li>Foundation for Romberg integration</li>
+            </ul>
+          </div>
+          <div class="pro-con-box cons">
+            <h4>✗ Limitations</h4>
+            <ul>
+              <li>Requires smooth (C∞) functions</li>
+              <li>Rounding error grows as h → 0</li>
+              <li>Not suitable for noisy or tabulated data</li>
+              <li>Singularities invalidate Taylor expansion</li>
+              <li>Step-size selection requires judgment</li>
+              <li>Complex arithmetic not handled by basic formula</li>
+            </ul>
+          </div>
+        </div>
+
+        <h3>8. Error Comparison Table</h3>
+        <div style="overflow-x:auto;margin:1rem 0">
+          <table style="width:100%;border-collapse:collapse;font-size:.875rem">
+            <thead>
+              <tr style="background:var(--bg-alt)">
+                <th style="padding:.6rem 1rem;border:1px solid var(--border);text-align:left">h</th>
+                <th style="padding:.6rem 1rem;border:1px solid var(--border);text-align:left">D(h) error ≈</th>
+                <th style="padding:.6rem 1rem;border:1px solid var(--border);text-align:left">R (level 1) ≈</th>
+                <th style="padding:.6rem 1rem;border:1px solid var(--border);text-align:left">R (level 2) ≈</th>
+                <th style="padding:.6rem 1rem;border:1px solid var(--border);text-align:left">Speedup</th>
+               </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="padding:.45rem 1rem;border:1px solid var(--border);font-family:var(--font-mono)">0.1</td>
+                <td style="padding:.45rem 1rem;border:1px solid var(--border);font-family:var(--font-mono)">10⁻²</td>
+                <td style="padding:.45rem 1rem;border:1px solid var(--border);font-family:var(--font-mono)">10⁻⁴</td>
+                <td style="padding:.45rem 1rem;border:1px solid var(--border);font-family:var(--font-mono)">10⁻⁶</td>
+                <td style="padding:.45rem 1rem;border:1px solid var(--border)">10⁴×</td>
+              </tr>
+              <tr style="background:var(--bg-alt)">
+                <td style="padding:.45rem 1rem;border:1px solid var(--border);font-family:var(--font-mono)">0.01</td>
+                <td style="padding:.45rem 1rem;border:1px solid var(--border);font-family:var(--font-mono)">10⁻⁴</td>
+                <td style="padding:.45rem 1rem;border:1px solid var(--border);font-family:var(--font-mono)">10⁻⁸</td>
+                <td style="padding:.45rem 1rem;border:1px solid var(--border);font-family:var(--font-mono)">10⁻¹²</td>
+                <td style="padding:.45rem 1rem;border:1px solid var(--border)">10⁸×</td>
+              </tr>
+              <tr>
+                <td style="padding:.45rem 1rem;border:1px solid var(--border);font-family:var(--font-mono)">0.001</td>
+                <td style="padding:.45rem 1rem;border:1px solid var(--border);font-family:var(--font-mono)">10⁻⁶</td>
+                <td style="padding:.45rem 1rem;border:1px solid var(--border);font-family:var(--font-mono)">10⁻¹²</td>
+                <td style="padding:.45rem 1rem;border:1px solid var(--border);font-family:var(--font-mono)">10⁻¹⁸</td>
+                <td style="padding:.45rem 1rem;border:1px solid var(--border)">10¹²×</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="examples" aria-labelledby="examples-heading">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag">Worked Examples</span>
+      <h2 id="examples-heading">Two Complete Step-by-Step Solutions</h2>
+      <p>All intermediate values shown explicitly. Verify these results using the interactive calculator below.</p>
+    </div>
+
+    <article class="example-card" aria-labelledby="ex1-heading">
+      <div class="example-header">
+        <div class="example-num" aria-hidden="true">1</div>
+        <div>
+          <h3 id="ex1-heading">f(x) = sin(x) at x₀ = 1.0, h = 0.1</h3>
+          <p>Exact derivative: f′(x) = cos(x) ⟹ f′(1.0) = cos(1.0) ≈ 0.54030</p>
+        </div>
+      </div>
+      <div class="example-body">
+        <div class="definition-box" style="margin-top:0">
+          <h4>Given</h4>
+          \[f(x) = \sin(x),\quad x_0 = 1.0,\quad h = 0.1\]
+          \[f'(x) = \cos(x) \;\Rightarrow\; f'(1.0) = \cos(1) \approx 0.54030\]
+        </div>
+        <div class="step">
+          <div class="step-num">Step 1 — Function evaluations</div>
+          <div>
+            \[f(1.1) = \sin(1.1) \approx 0.89121\]
+            \[f(0.9) = \sin(0.9) \approx 0.78333\]
+            \[f(1.05) = \sin(1.05) \approx 0.86742\]
+            \[f(0.95) = \sin(0.95) \approx 0.81342\]
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">Step 2 — Central difference D(h) with h = 0.1</div>
+          <div>
+            \[D(0.1) = \frac{f(1.1) - f(0.9)}{2(0.1)}
+              = \frac{0.89121 - 0.78333}{0.2}
+              = \frac{0.10788}{0.2} = \mathbf{0.53940}\]
+            \[\text{Truncation error} = \left|\,D(0.1) - f'(1)\right| \approx 9.00 \times 10^{-4}\]
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">Step 3 — Central difference D(h/2) with h/2 = 0.05</div>
+          <div>
+            \[D(0.05) = \frac{f(1.05) - f(0.95)}{2(0.05)}
+              = \frac{0.86742 - 0.81342}{0.1}
+              = \frac{0.05401}{0.1} = \mathbf{0.54008}\]
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">Step 4 — Richardson Extrapolation</div>
+          <div>
+            \[R = \frac{4 \times D(0.05) - D(0.1)}{3}
+                = \frac{4 \times 0.54008 - 0.53940}{3}
+                = \frac{2.16031 - 0.53940}{3}
+                = \frac{1.62091}{3} \approx \mathbf{0.54030}\]
+          </div>
+        </div>
+        <div class="result-box">
+          <div class="label">Results Summary</div>
+          <div>
+            <p style="margin:.35rem 0">Richardson result: \(R \approx 0.54030\)</p>
+            <p style="margin:.35rem 0">Exact \(f'(1) = \cos(1) \approx 0.54030\)</p>
+            <p style="margin:.35rem 0">
+              Richardson error: <span class="error-highlight">\(|R - f'| \approx 4.0 \times 10^{-7}\)</span>
+            </p>
+            <p style="margin:.35rem 0">
+              Central-diff error: \(|D(h) - f'| \approx 9.0 \times 10^{-4}\)
+              &nbsp;→&nbsp; Richardson is <strong>≈ 2 250× more accurate</strong>
+            </p>
+            <p style="margin:.35rem 0; font-size:.83rem; color:var(--text-muted)">
+              The improvement factor is \(h^2 / h^4 = 10^2 = 100\) in theory; the measured 2 250× reflects
+              the specific Taylor coefficients of \(\sin(x)\) at \(x=1\).
+            </p>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <article class="example-card" aria-labelledby="ex2-heading">
+      <div class="example-header">
+        <div class="example-num" aria-hidden="true">2</div>
+        <div>
+          <h3 id="ex2-heading">f(x) = x³ − 2x + 1 at x₀ = 2.0, h = 0.2</h3>
+          <p>Exact derivative: f′(x) = 3x² − 2 ⟹ f′(2.0) = 10.0 (integer, exact)</p>
+        </div>
+      </div>
+      <div class="example-body">
+        <div class="definition-box" style="margin-top:0">
+          <h4>Given</h4>
+          \[f(x) = x^3 - 2x + 1,\quad x_0 = 2.0,\quad h = 0.2\]
+          \[f'(x) = 3x^2 - 2 \;\Rightarrow\; f'(2) = 3(4) - 2 = 10\]
+        </div>
+        <div class="step">
+          <div class="step-num">Step 1 — Function evaluations</div>
+          <div>
+            \[f(2.2) = (2.2)^3 - 2(2.2) + 1 = 10.648 - 4.4 + 1 = \mathbf{7.248}\]
+            \[f(1.8) = (1.8)^3 - 2(1.8) + 1 = 5.832 - 3.6 + 1  = \mathbf{3.232}\]
+            \[f(2.1) = (2.1)^3 - 2(2.1) + 1 = 9.261 - 4.2 + 1  = \mathbf{6.061}\]
+            \[f(1.9) = (1.9)^3 - 2(1.9) + 1 = 6.859 - 3.8 + 1  = \mathbf{4.059}\]
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">Step 2 — Central difference D(h) with h = 0.2</div>
+          <div>
+            \[D(0.2) = \frac{7.248 - 3.232}{2(0.2)} = \frac{4.016}{0.4} = \mathbf{10.04}\]
+            \[\text{Truncation error} = |10.04 - 10| = 0.04\]
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">Step 3 — Central difference D(h/2) with h/2 = 0.1</div>
+          <div>
+            \[D(0.1) = \frac{6.061 - 4.059}{2(0.1)} = \frac{2.002}{0.2} = \mathbf{10.01}\]
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">Step 4 — Richardson Extrapolation</div>
+          <div>
+            \[R = \frac{4(10.01) - 10.04}{3} = \frac{40.04 - 10.04}{3} = \frac{30.00}{3} = \mathbf{10.00}\]
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">Why is Richardson exact here?</div>
+          <div>
+            <p>
+              For \(f(x) = x^3 - 2x + 1\), the 4th derivative \(f^{(4)}(x) = 0\) identically.
+              This means the Taylor error expansion terminates after the \(h^2\) term, which
+              Richardson eliminates exactly. The result is \(f'(2) = 10.000\ldots\) to
+              machine precision.
+            </p>
+            \[D(h) = f'(x) + \frac{h^2}{6}f'''(x) + \underbrace{O(h^4)}_{=\,0 \text{ for cubics}}
+              \quad\Rightarrow\quad R = f'(x) \text{ exactly}\]
+          </div>
+        </div>
+        <div class="result-box">
+          <div class="label">Results Summary</div>
+          <div>
+            <p style="margin:.35rem 0">Richardson result: \(R = 10.00000\ldots\) (machine precision)</p>
+            <p style="margin:.35rem 0">Exact \(f'(2) = 10.0\)</p>
+            <p style="margin:.35rem 0">
+              Richardson error: <span class="error-highlight">\(|R - f'| \approx 7 \times 10^{-15}\)</span> (rounding only)
+            </p>
+            <p style="margin:.35rem 0">Central-diff error: \(|D(h) - f'| = 0.04\)</p>
+            <p style="margin:.35rem 0;font-size:.83rem;color:var(--text-muted)">
+              Richardson is <strong>exact</strong> for polynomials of degree ≤ 3.
+              This confirms the theoretical prediction that the \(h^2\) cancellation is algebraically perfect.
+            </p>
+          </div>
+        </div>
+      </div>
+    </article>
+
+  </div>
+</section>
+
+<section class="section" id="calculator" aria-labelledby="calc-heading">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag">Interactive</span>
+      <h2 id="calc-heading">Richardson Extrapolation Calculator</h2>
+      <p>
+        Enter any smooth function with full step-by-step results, Richardson tableau,
+        second derivative, convergence analysis, and a geometric plot.
+      </p>
+    </div>
+
+    <div class="calc-wrapper">
+      <div class="calc-panel" role="form" aria-label="Calculator inputs">
+        <h3 id="input-panel-heading">⟨ Input Parameters ⟩</h3>
+
+        <div style="margin-bottom:.5rem">
+          <span style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-light)">
+            Quick Functions
+          </span>
+        </div>
+        <div class="quick-functions" role="group" aria-label="Quick function presets">
+          <button class="quick-fn" data-expr="sin(x)"           aria-label="Insert sin(x)">sin(x)</button>
+          <button class="quick-fn" data-expr="cos(x)"           aria-label="Insert cos(x)">cos(x)</button>
+          <button class="quick-fn" data-expr="exp(x)"           aria-label="Insert exp(x)">eˣ</button>
+          <button class="quick-fn" data-expr="x**3 - 2*x + 1"  aria-label="Insert x³-2x+1">x³−2x+1</button>
+          <button class="quick-fn" data-expr="log(x)"           aria-label="Insert ln(x)">ln(x)</button>
+          <button class="quick-fn" data-expr="x**2*sin(x)"      aria-label="Insert x²sin(x)">x²sin(x)</button>
+          <button class="quick-fn" data-expr="tan(x)"           aria-label="Insert tan(x)">tan(x)</button>
+          <button class="quick-fn" data-expr="sqrt(x)"          aria-label="Insert sqrt(x)">√x</button>
+          <button class="quick-fn" data-expr="1/(1+x**2)"       aria-label="Insert 1/(1+x²)">1/(1+x²)</button>
+          <button class="quick-fn" data-expr="x**4 - 3*x**2 + 2" aria-label="Insert x⁴-3x²+2">x⁴−3x²+2</button>
+        </div>
+
+        <div class="form-group">
+          <label for="exprInput">
+            Function f(x)
+            <span class="tooltip-wrap" role="tooltip">
+              <span class="tooltip-icon" aria-label="Help for function input" tabindex="0">?</span>
+              <span class="tooltip-content" role="tooltip">
+                Enter a mathematical expression in x. Supported: sin, cos, tan, exp, log, sqrt,
+                x**n, pi, e. Use explicit multiplication: 2*x not 2x.
+              </span>
+            </span>
+          </label>
+          <input type="text" id="exprInput"
+            placeholder="e.g.  sin(x)"
+            autocomplete="off" spellcheck="false"
+            aria-describedby="exprError"
+            aria-required="true" />
+          <div id="exprError" class="error-msg" role="alert" aria-live="polite"></div>
+          <div class="form-hint">sin, cos, tan, exp, log, sqrt, x**n, pi, e, Abs(x)</div>
+        </div>
+
+        <div class="form-group">
+          <label for="xInput">
+            x₀ Value
+            <span class="tooltip-wrap" role="tooltip">
+              <span class="tooltip-icon" aria-label="Help for x value" tabindex="0">?</span>
+              <span class="tooltip-content" role="tooltip">
+                The point at which to differentiate f(x). Must be in the domain
+                of your function (e.g. x &gt; 0 for log(x)).
+              </span>
+            </span>
+          </label>
+          <input type="number" id="xInput"
+            placeholder="e.g.  1.0" step="any"
+            aria-describedby="xError"
+            aria-required="true" />
+          <div id="xError" class="error-msg" role="alert" aria-live="polite"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="hInput">
+            Step Size h
+            <span class="tooltip-wrap" role="tooltip">
+              <span class="tooltip-icon" aria-label="Help for step size h" tabindex="0">?</span>
+              <span class="tooltip-content" role="tooltip">
+                Finite-difference step. Must be non-zero. Recommended range: 10⁻⁴ to 0.5.
+                Too small → cancellation error. Too large → large truncation error.
+              </span>
+            </span>
+          </label>
+          <input type="number" id="hInput"
+            placeholder="e.g.  0.1" step="any"
+            aria-describedby="hError"
+            aria-required="true" />
+          <div id="hError" class="error-msg" role="alert" aria-live="polite"></div>
+          <div class="form-hint">Optimal: h ≈ ε<sub>mach</sub><sup>¼</sup> ≈ 1.2 × 10⁻⁴ (auto-suggested after compute)</div>
+        </div>
+
+        <button id="calcBtn" class="btn btn-accent" style="width:100%;margin-top:.5rem"
+          aria-label="Calculate Richardson Extrapolation">
+          ⟨ Calculate ⟩
+        </button>
+
+        <div style="margin-top:1.5rem;padding:.9rem 1rem;background:var(--bg-alt);border-radius:var(--radius);border:1px solid var(--border)">
+          <p style="font-size:.78rem;color:var(--text-muted);margin:0;line-height:1.6">
+            <strong style="color:var(--text)">Secure parsing:</strong>
+            Expressions are evaluated via SymPy's symbolic engine with a strict allowlist —
+            raw <code style="font-family:var(--font-mono)">eval()</code> is never used.
+            Forbidden tokens (import, exec, os, sys, __) are rejected before parsing.
+            The API enforces rate limiting, body-size limits, and security response headers.
+          </p>
+        </div>
+      </div>
+
+      <div class="result-panel" id="resultPanel" role="region" aria-live="polite" aria-label="Computation results">
+        <h3>Computation Results</h3>
+        <div class="placeholder-state">
+          <div class="icon" aria-hidden="true">∂</div>
+          <p>Enter a function, x₀, and step size h,<br/>then click <strong>Calculate</strong>.</p>
+          <p style="font-size:.8rem">
+            Results include: step-by-step workings, Richardson tableau,
+            second derivative, convergence order, and a geometric plot.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div style="max-width:760px;margin:2.5rem auto 0">
+      <div class="card" style="text-align:center">
+        <p style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-light);margin-bottom:.75rem">
+          Formula Reference
+        </p>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;font-size:.875rem;color:var(--text-muted)">
+          <div>
+            \[D(h) = \frac{f(x+h)-f(x-h)}{2h}\]
+            <small>O(h²)</small>
+          </div>
+          <div>
+            \[D\!\left(\tfrac{h}{2}\right) = \frac{f(x+\tfrac{h}{2})-f(x-\tfrac{h}{2})}{h}\]
+            <small>O(h²), half step</small>
+          </div>
+          <div>
+            \[R = \frac{4D(h/2)-D(h)}{3}\]
+            <small>O(h⁴)</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="references" aria-labelledby="refs-heading">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-tag">References</span>
+      <h2 id="refs-heading">Academic References</h2>
+    </div>
+    <div class="card" style="max-width:840px;margin:0 auto">
+      <ol style="list-style:decimal;padding-left:1.5rem;display:flex;flex-direction:column;gap:1rem">
+        <li style="font-size:.9rem;color:var(--text-muted);padding-bottom:1rem;border-bottom:1px solid var(--border)">
+          <strong style="color:var(--text)">Richardson, L. F.</strong> (1911).
+          "The approximate arithmetical solution by finite differences of physical problems including differential equations."
+          <em>Philosophical Transactions of the Royal Society A</em>, 210, 307–357.
+        </li>
+        <li style="font-size:.9rem;color:var(--text-muted);padding-bottom:1rem;border-bottom:1px solid var(--border)">
+          <strong style="color:var(--text)">Burden, R. L. &amp; Faires, J. D.</strong> (2011).
+          <em>Numerical Analysis</em> (9th ed.), Brooks/Cole.
+        </li>
+        <li style="font-size:.9rem;color:var(--text-muted);padding-bottom:1rem;border-bottom:1px solid var(--border)">
+          <strong style="color:var(--text)">Chapra, S. C. &amp; Canale, R. P.</strong> (2021).
+          <em>Numerical Methods for Engineers</em> (8th ed.), McGraw-Hill.
+        </li>
+        <li style="font-size:.9rem;color:var(--text-muted)">
+          <strong style="color:var(--text)">Press, W. H., Teukolsky, S. A., Vetterling, W. T. &amp; Flannery, B. P.</strong> (2007).
+          <em>Numerical Recipes: The Art of Scientific Computing</em> (3rd ed.), Cambridge.
+        </li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<footer class="footer" role="contentinfo">
+  <div class="footer-inner">
+    <div>
+      <h4>∂ Richardson Extrapolation</h4>
+      <p>Numerical Methods web calculator — Topic 27 of 46.</p>
+      <p style="margin-top:.75rem">Flask · SymPy · NumPy · Matplotlib · MathJax 3</p>
+    </div>
+    <div>
+      <h4>Navigation</h4>
+      <ul>
+        <li><a href="#home">Home</a></li>
+        <li><a href="#discussion">Mathematical Discussion</a></li>
+        <li><a href="#examples">Worked Examples</a></li>
+        <li><a href="#calculator">Interactive Calculator</a></li>
+        <li><a href="#references">References</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>Technology</h4>
+      <ul>
+        <li>Python 3 + Flask 3</li>
+        <li>SymPy — safe symbolic parsing</li>
+        <li>NumPy — vectorised evaluation</li>
+        <li>Matplotlib — server-side plots</li>
+        <li>MathJax 3 — LaTeX rendering</li>
+        <li>Vercel — deployment</li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>PIT Finals Project — Numerical Methods 2026</span>
+    <span>Richardson Extrapolation · Topic 27 · L.F. Richardson, 1911</span>
+  </div>
+</footer>
+
+<script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

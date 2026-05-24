@@ -1,0 +1,5 @@
+flask>=3.0.0
+sympy>=1.12
+numpy>=1.26
+matplotlib>=3.8
+gunicorn>=21.2
